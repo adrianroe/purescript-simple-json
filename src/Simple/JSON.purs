@@ -29,6 +29,8 @@ module Simple.JSON
 
 import Prelude
 
+import Data.Newtype (class Newtype)
+
 import Control.Alt ((<|>))
 import Control.Monad.Except (ExceptT(..), runExcept, withExcept)
 import Data.Array as Array
@@ -190,13 +192,21 @@ instance readNullable :: ReadForeign a => ReadForeign (Nullable a) where
         TypeMismatch inner other -> TypeMismatch ("Nullable " <> inner) other
         _ -> error
 
-instance readMap :: ReadForeign a => ReadForeign (Map String a) where
+instance readMapNewtype :: ReadForeign a => ReadForeign (Map b a) where
   readImpl = sequence <<< map readImpl <=< readObject'
     where
-      readObject' :: Foreign -> F (Map String Foreign)
+      readObject' :: Foreign -> F (Map b Foreign)
       readObject' value
         | tagOf value == "map" = pure $ unsafeFromForeign value
         | otherwise = fail $ TypeMismatch "Object" (tagOf value)
+
+-- instance readMap :: (Newtype b String, ReadForeign a) => ReadForeign (Map b a) where
+--   readImpl = sequence <<< map readImpl <=< readObject'
+--     where
+--       readObject' :: Foreign -> F (Map b Foreign)
+--       readObject' value
+--         | tagOf value == "map" = pure $ unsafeFromForeign value
+--         | otherwise = fail $ TypeMismatch "Object" (tagOf value)
 
 instance readRecord ::
   ( RowToList fields fieldList
